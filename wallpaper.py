@@ -99,7 +99,7 @@ i_imgur
 http://i.imgur.com already contains the direct image URL...no further work needed.
 '''
 def i_imgur(data):
-    return data['url']
+    return data['url'] if link_ok(data['url']) else None
 
 
 _VALID_DOMAINS = {
@@ -143,9 +143,9 @@ if __name__ == "__main__":
     
     if len(papers) > 0:
         img = random.choice(papers)
-        fn = img.split('/')[-1]
+        ext = img.split('/')[-1].split(".")[1]
         
-        with open('/tmp/%s' % fn, "wb") as pic:
+        with open('/tmp/wallpaper.%s' % ext, "wb") as pic:
             resp = requests.get(img, stream=True)
             
             if resp.ok:
@@ -155,4 +155,4 @@ if __name__ == "__main__":
                     
                     pic.write(block)
         
-        change_wallpaper("/tmp/%s" % fn)
+        change_wallpaper("/tmp/wallpaper.%s" % ext)
