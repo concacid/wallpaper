@@ -1,7 +1,7 @@
 Reddit Wallpaper
 =================
 
-A simple script to get the newest posts from a subreddit (i.e.: http://www.reddit.com/r/<subreddit>),
+A simple script to get the newest posts from a subreddit (i.e.: http://www.reddit.com/r/[subreddit]),
 get image links and return the links.
 
 From crude testing this supports initially i.imgur.com and imgur.com links (but **not** albums!).
