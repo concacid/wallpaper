@@ -21,16 +21,31 @@ import re
 import sys
 import subprocess
 import random
+import os
 
 SUB = ""
+data = ""
 
 # If no sub is given, exit out
 try:
     SUB = sys.argv[1]
 except IndexError:
-    print "Usage: %s subreddit" % sys.argv[0]
-    sys.exit(1)
+    try:
+        with open("%s/.redwall.conf" % (os.path.expanduser("~")), "rt") as fp:
+            data = fp.read().strip()
+    except IOError:
+        print "Usage: %s subreddit" % sys.argv[0]
+        sys.exit(1)
 
+SUB = [x.strip() for x in data.split(",")] if "," in data else data
+
+print "Sorting through subreddit(s)",SUB
+
+if type(SUB) is list:
+    print "Picking a random subreddit to use..."
+    SUB = random.choice(SUB)
+    print "Chose",SUB
+    
 def change_wallpaper(fn):
     # This supposedly works for Unity and Gnome 3
     subprocess.call([
