@@ -70,13 +70,10 @@ Attempt to retrieve proper image from imgur.com link (does not work for albums)
 def imgur(data):
     url = data['url']
     
-    if not link_ok(url):
-        return None
-    
     # If we have a non-album regular imgur.com link, get the image ID
     fetch = re.match("http://imgur.com/([^a/].+)", url)
     
-    if fetch is not None:
+    if link_ok(url) and fetch is not None:
         # The image link itself is http://i.imgur.com/<img id>.<extension>
         _URI = "http://i.imgur.com/%s" % (fetch.group(1))
         
