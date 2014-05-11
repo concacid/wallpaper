@@ -44,6 +44,9 @@ def change_wallpaper(fn):
 # These are valid image extensions to use
 _VALID_EXTENSIONS = ["jpg", "png"]
 
+def link_ok(link):
+    return link.split(".")[-1] in _VALID_EXTENSIONS
+
 '''
 imgur
 
@@ -51,6 +54,9 @@ Attempt to retrieve proper image from imgur.com link (does not work for albums)
 '''
 def imgur(data):
     url = data['url']
+    
+    if not link_ok(url):
+        return None
     
     # If we have a non-album regular imgur.com link, get the image ID
     fetch = re.match("http://imgur.com/([^a/].+)", url)
@@ -106,6 +112,8 @@ def get_sub(sub):
         # Only work with link posts that we are wanting to parse
         if domain not in _VALID_DOMAINS:
             continue
+        
+        ext = entry['url'].split('.')[-1]
         
         # For each entry, retrieve the URL
         yield _VALID_DOMAINS[domain](entry)
