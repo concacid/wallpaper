@@ -19,6 +19,8 @@ Anyways, enjoy!
 import requests
 import re
 import sys
+import subprocess
+import random
 
 SUB = ""
 
@@ -29,8 +31,18 @@ except IndexError:
     print "Usage: %s subreddit" % sys.argv[0]
     sys.exit(1)
 
+def change_wallpaper(fn):
+    # This supposedly works for Unity and Gnome 3
+    subprocess.call([
+        "gsettings",
+        "set",
+        "org.gnome.desktop.background",
+        "picture-uri",
+        "file://%s" % fn
+    ])
+
 # These are valid image extensions to use
-_VALID_EXTENSIONS = ["jpg", "png", "gif"]
+_VALID_EXTENSIONS = ["jpg", "png"]
 
 '''
 imgur
@@ -98,7 +110,26 @@ def get_sub(sub):
         # For each entry, retrieve the URL
         yield _VALID_DOMAINS[domain](entry)
 
-# By default we just print the URL to the screen
-for uri in get_sub(SUB):
-    if uri is not None:
-        print uri
+if __name__ == "__main__":
+    papers = []
+    
+    # By default we just print the URL to the screen
+    for uri in get_sub(SUB):
+        if uri is not None:
+            papers.append(uri)
+    
+    if len(papers) > 0:
+        img = random.choice(papers)
+        fn = img.split('/')[-1]
+        
+        with open('/tmp/%s' % fn, "wb") as pic:
+            resp = requests.get(img, stream=True)
+            
+            if resp.ok:
+                for block in resp.iter_content(1024):
+                    if not block:
+                        break
+                    
+                    pic.write(block)
+        
+        change_wallpaper("/tmp/%s" % fn)
