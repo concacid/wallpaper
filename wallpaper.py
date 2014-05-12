@@ -25,10 +25,12 @@ import os
 
 SUB = ""
 data = ""
+HOME_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
+TEMP_DIR = os.path.join(HOME_DIR, 'temp')
 
 # If no sub is given, exit out
 try:
-    SUB = sys.argv[1]
+    data = sys.argv[1]
 except IndexError:
     try:
         with open("%s/.redwall.conf" % (os.path.expanduser("~")), "rt") as fp:
@@ -47,6 +49,15 @@ if type(SUB) is list:
     print "Chose",SUB
     
 def change_wallpaper(fn):
+    if os.name == 'posix':
+        change_wallpaper_lin(fn)
+    if os.name == 'nt':
+        change_wallpaper_win(fn)
+
+def change_wallpaper_win(fn):
+    print 'changing wallpaper not implemented yet for windows'
+
+def change_wallpaper_lin(fn):
     # This supposedly works for Unity and Gnome 3
     subprocess.call([
         "gsettings",
@@ -142,7 +153,10 @@ if __name__ == "__main__":
         img = random.choice(papers)
         ext = img.split('/')[-1].split(".")[1]
         
-        with open('/tmp/wallpaper.%s' % ext, "wb") as pic:
+        if not os.path.isdir(TEMP_DIR):
+            os.mkdir(TEMP_DIR)
+        img_path = os.path.join(TEMP_DIR, 'wallpaper.%s' % ext)
+        with open(img_path, "wb") as pic:
             resp = requests.get(img, stream=True)
             
             if resp.ok:
@@ -152,4 +166,4 @@ if __name__ == "__main__":
                     
                     pic.write(block)
         
-        change_wallpaper("/tmp/wallpaper.%s" % ext)
+        change_wallpaper(img_path)
