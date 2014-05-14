@@ -22,6 +22,9 @@ import sys
 import subprocess
 import random
 import os
+if os.name == 'nt':
+    import ctypes
+    import Image
 
 SUB = ""
 data = ""
@@ -55,8 +58,26 @@ def change_wallpaper(fn):
         change_wallpaper_win(fn)
 
 def change_wallpaper_win(fn):
-    print 'changing wallpaper not implemented yet for windows'
-
+    # SystemParametersInfoA constants
+    SPI_SETDESKWALLPAPER = 0x0014
+    SPIF_UPDATEINIFILE = 0x01
+    SPIF_SENDWININICHANGE = 0x02
+    
+    # file path with file extension changed to '.bmp'
+    fn_split = list(os.path.split(fn))
+    fname_ext = fn_split[-1]
+    if len(fname_ext.split('.')) > 1:
+        fn_split[-1] = ''.join(fname_ext.split('.')[:-1])+'.bmp'
+    new_fn = os.path.join(*fn_split)
+    
+    # convert to BMP
+    img = Image.open(fn).save(new_fn)
+    
+    # use Windows API to change wallpaper
+    # IMPORTANT: use str() on file name, os.path.join() produces a unicode -> u'abc'.
+    # Windows API doesn't accept it!!!
+    result = ctypes.windll.user32.SystemParametersInfoA(SPI_SETDESKWALLPAPER, 0, str(new_fn) , 0)
+    
 def change_wallpaper_lin(fn):
     # This supposedly works for Unity and Gnome 3
     subprocess.call([
