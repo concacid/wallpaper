@@ -22,6 +22,7 @@ import sys
 import subprocess
 import random
 import os
+from imgurAlbumExtractor import imgurAlbumExtractor
 if os.name == 'posix':
     import tty
     import termios
@@ -35,19 +36,18 @@ data = ""
 HOME_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
 TEMP_DIR = os.path.join(HOME_DIR, 'temp')
 
-# If no sub is given, exit out
+# If no sub is given, use 'subreddits.cfg'. If not, exit out
 try:
-    data = sys.argv[1]
+    SUB  = sys.argv[1]
 except IndexError:
     try:
         with open(os.path.join(HOME_DIR, 'subreddits.cfg')) as fp:
             data = fp.read().strip()
+        SUB = [x.strip() for x in data.split(",")] if "," in data else data
     except IOError:
         print "Usage: %s subreddit" % sys.argv[0], \
               'OR edit \'subreddits.cfg\' in the format: \'subreddit1, subreddit2, etc..\''
         sys.exit(1)
-
-SUB = [x.strip() for x in data.split(",")] if "," in data else data
 
 print "Sorting through subreddit(s)",SUB
 
@@ -120,28 +120,44 @@ def link_ok(link):
 imgur
 
 Attempt to retrieve proper image from imgur.com link (does not work for albums)
+edit: Add album support. Still testing
 '''
 def imgur(data):
     url = data['url']
-    
+    result = []
+
+    # Process single image URLs
     # If we have a non-album regular imgur.com link, get the image ID
     fetch = re.match("http://imgur.com/([^a/].+)", url)
     
-    if link_ok(url) and fetch is not None:
+    if fetch is not None:
         # The image link itself is http://i.imgur.com/<img id>.<extension>
         _URI = "http://i.imgur.com/%s" % (fetch.group(1))
-        
+
+        # To-do: change the next block to use the same method as in albums
+        # (ie: parse html to find image link
+        # (you will find it under the tag: <div id="image" class="zoom">
+        #
         # Loop through each valid extension to try
         for ext in _VALID_EXTENSIONS:
-            _IMGURL = "%s.%s" % (_URI, ext)
-            
-            r = requests.get(_IMGURL)
-            
+            img_url = "%s.%s" % (_URI, ext)
+            r = requests.get(img_url)
             # If we get a 200 response back, we assume its the image we want
             if r.status_code == requests.codes.ok:
-                return _IMGURL
-        
-    return None
+                result.append(img_url)
+                urltype = 'single image: ' + url
+
+    # Process album URLs
+    fetch_album = re.match("http://imgur.com/a/(.+)", url)
+    if fetch_album is not None:
+        response = requests.get(url)
+        parser = imgurAlbumExtractor()
+        parser.feed(response.text)
+        result = parser.get_posts()
+
+    if len(result) == 0:
+        return None
+    return result
     
 
 '''
@@ -150,8 +166,17 @@ i_imgur
 http://i.imgur.com already contains the direct image URL...no further work needed.
 '''
 def i_imgur(data):
-    return data['url'] if link_ok(data['url']) else None
+    if link_ok(data['url']):
+        result = [data['url']]
+    else:
+        result = None
+    return result
 
+def extract_imgur_album(album_url):
+    parser = imgurAlbumExtractor()
+    parser.feed(album_url)
+    # retruns a list of 'http://i.imgur.com/xxx' links
+    return parser.get_posts()
 
 _VALID_DOMAINS = {
     "imgur.com": imgur,
@@ -188,12 +213,15 @@ if __name__ == "__main__":
     papers = []
     
     # By default we just print the URL to the screen
-    for uri in get_sub(SUB):
-        if uri is not None:
-            papers.append(uri)
-    
+    for urilist in get_sub(SUB):
+        if urilist:
+            print '> Adding to URI list: \n', urilist
+            papers.extend(urilist)
+    with open(os.path.join(HOME_DIR, 'debug.log'), 'w') as fp:
+        fp.write(str('\n'.join(papers)))
     if len(papers) > 0:
         img = random.choice(papers)
+        print '> Using image: ', img
         ext = img.split('/')[-1].split(".")[1]
         
         if not os.path.isdir(TEMP_DIR):
