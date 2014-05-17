@@ -22,9 +22,13 @@ import sys
 import subprocess
 import random
 import os
+if os.name == 'posix':
+    import tty
+    import termios
 if os.name == 'nt':
     import ctypes
     import Image
+    import msvcrt
 
 SUB = ""
 data = ""
@@ -36,10 +40,11 @@ try:
     data = sys.argv[1]
 except IndexError:
     try:
-        with open("%s/.redwall.conf" % (os.path.expanduser("~")), "rt") as fp:
+        with open(os.path.join(HOME_DIR, 'subreddits.cfg')) as fp:
             data = fp.read().strip()
     except IOError:
-        print "Usage: %s subreddit" % sys.argv[0]
+        print "Usage: %s subreddit" % sys.argv[0], \
+              'OR edit \'subreddits.cfg\' in the format: \'subreddit1, subreddit2, etc..\''
         sys.exit(1)
 
 SUB = [x.strip() for x in data.split(",")] if "," in data else data
@@ -50,6 +55,23 @@ if type(SUB) is list:
     print "Picking a random subreddit to use..."
     SUB = random.choice(SUB)
     print "Chose",SUB
+
+def getch():
+    if os.name == 'posix':
+        return getch_lin()
+    if os.name == 'nt':
+        return getch_win()
+    
+def getch_win():
+    ch = msvcrt.getch()
+    return ch
+
+def getch_lin():
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    tty.setraw(sys.stdin.fileno())
+    ch = sys.stdin.read(1)
+    return ch
     
 def change_wallpaper(fn):
     if os.name == 'posix':
@@ -76,7 +98,7 @@ def change_wallpaper_win(fn):
     # use Windows API to change wallpaper
     # IMPORTANT: use str() on file name, os.path.join() produces a unicode -> u'abc'.
     # Windows API doesn't accept it!!!
-    result = ctypes.windll.user32.SystemParametersInfoA(SPI_SETDESKWALLPAPER, 0, str(new_fn) , 0)
+    result = ctypes.windll.user32.SystemParametersInfoA(SPI_SETDESKWALLPAPER, 0, str(new_fn) , SPIF_UPDATEINIFILE)
     
 def change_wallpaper_lin(fn):
     # This supposedly works for Unity and Gnome 3
@@ -188,3 +210,9 @@ if __name__ == "__main__":
                     pic.write(block)
         
         change_wallpaper(img_path)
+
+        # This is useful as you can double-click the script file and still
+        # get the chance to read the messages before it closes
+        # (instead of having to use the command line)
+        print 'Press any key to continue..'
+        getch()
